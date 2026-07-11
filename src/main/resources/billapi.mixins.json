@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.zete1x.billapi.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ClientPlayerInteractionMixin"
+  ],
+  "client": [
+    "ClientPlayerInteractionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
