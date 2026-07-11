@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "billapi",
+  "version": "${version}",
+  "name": "BillAPI",
+  "description": "Мод с Autoclicky, AimAssist и ESP функциями 🎯",
+  "authors": [
+    "Zete1x_Dev"
+  ],
+  "contact": {
+    "sources": "https://github.com/HeMaclo/BillAPI-"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.zete1x.billapi.BillAPI"
+    ],
+    "modmenu": [
+      "dev.zete1x.billapi.gui.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "billapi.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_version}",
+    "java": ">=21"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}
