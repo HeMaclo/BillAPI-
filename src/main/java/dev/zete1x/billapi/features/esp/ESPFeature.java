@@ -1,35 +1,39 @@
 package dev.zete1x.billapi.features.esp;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import org.joml.Matrix4f;
 import dev.zete1x.billapi.config.ConfigManager;
 import dev.zete1x.billapi.config.KeyBindings;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * ESP фича - визуальное выделение игроков и мобов сквозь стены
+ * ESP фича - визуальное выделение игроков и мобов через встроенный Glowing эффект
  * 
  * Логика:
  * 1. Ищем всех игроков/мобов в мире
- * 2. Рисуем боксы вокруг них
- * 3. Рисуется поверх других объектов (сквозь стены)
+ * 2. Применяем им встроенный Glowing эффект (как от spectral arrow)
+ * 3. Это позволяет видеть их сквозь стены и выделяет красивыми иконками
  * 
- * Примечание: для рисования нужны миксины, поэтому это базовая реализация
+ * Преимущества:
+ * - Встроено в Minecraft (нет нужны в кастомном рендеринге)
+ * - Красиво выглядит и понятно
+ * - Мало нагружает систему
+ * - Сквозь стены видно (как у Spectral Arrow)
  */
 public class ESPFeature {
 
     private MinecraftClient client = MinecraftClient.getInstance();
     private boolean enabled = false;
-    private List<Entity> cachedEntities = new ArrayList<>();
+    private Set<Integer> glowingEntities = new HashSet<>(); // Тракируем какие сущности уже светятся
 
     /**
      * Вызывается каждый тик
@@ -42,29 +46,33 @@ public class ESPFeature {
             enabled = !enabled;
             config.espEnabled = enabled;
             ConfigManager.save();
+            
+            // Если отключаем - убираем свечение со всех сущностей
+            if (!enabled) {
+                removeAllGlowing();
+            }
         }
 
         // Если фича отключена - выходим
         if (!config.espEnabled) {
-            cachedEntities.clear();
             return;
         }
 
-        // Обновляем кэш сущностей
-        updateEntityCache(config);
+        // Обновляем список светящихся сущностей
+        updateGlowing(config);
     }
 
     /**
-     * Обновляем список сущностей для отрисовки
+     * Обновляем свечение всех нужных сущностей
      */
-    private void updateEntityCache(ConfigManager.ModConfig config) {
-        cachedEntities.clear();
-
+    private void updateGlowing(ConfigManager.ModConfig config) {
         if (client.world == null || client.player == null) {
             return;
         }
 
-        // Собираем всех нужных сущностей
+        Set<Integer> currentGlowing = new HashSet<>();
+
+        // Собираем всех нужных сущностей и даем им свечение
         for (Entity entity : client.world.getEntities()) {
             // Пропускаем сам игрока и невидимых
             if (entity == client.player || entity.isInvisible()) {
@@ -72,64 +80,94 @@ public class ESPFeature {
             }
 
             // Проверяем типы сущностей которые нужно выделять
+            boolean shouldGlow = false;
+
             if (config.espPlayers && entity instanceof PlayerEntity) {
-                cachedEntities.add(entity);
+                shouldGlow = true;
             } else if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
 
                 if (config.espMobs && living instanceof HostileEntity) {
-                    cachedEntities.add(entity);
+                    shouldGlow = true;
                 } else if (config.espAnimals && living instanceof AnimalEntity) {
-                    cachedEntities.add(entity);
+                    shouldGlow = true;
+                }
+            }
+
+            if (shouldGlow) {
+                currentGlowing.add(entity.getId());
+                applyGlowing(entity);
+            }
+        }
+
+        // Убираем свечение с тех сущностей которые больше не нужны
+        for (Integer entityId : glowingEntities) {
+            if (!currentGlowing.contains(entityId)) {
+                // Ищем сущность по ID и убираем свечение
+                Entity entity = client.world.getEntityById(entityId);
+                if (entity != null) {
+                    removeGlowing(entity);
                 }
             }
         }
+
+        glowingEntities = currentGlowing;
     }
 
     /**
-     * Рисуем все боксы (вызывается из миксина)
+     * Применяем Glowing эффект к сущности
+     * Это создает красивое свечение сквозь стены (как spectral arrow)
      * 
-     * @param matrices матрица трансформации для рисования
-     * @param tickDelta дельта времени между кадрами
+     * @param entity сущность для выделения
      */
-    public void render(MatrixStack matrices, float tickDelta) {
-        ConfigManager.ModConfig config = ConfigManager.getConfig();
+    private void applyGlowing(Entity entity) {
+        if (entity instanceof LivingEntity) {
+            LivingEntity living = (LivingEntity) entity;
 
-        if (!config.espEnabled || client.player == null) {
+            // Есл�� уже светит - не применяем еще раз
+            if (living.hasStatusEffect(StatusEffects.GLOWING)) {
+                return;
+            }
+
+            // Применяем эффект Glowing с максимальной длительностью (практически вечный)
+            // Длительность: Integer.MAX_VALUE = примерно 37 часов игрового времени
+            living.addStatusEffect(
+                    new net.minecraft.entity.effect.StatusEffectInstance(
+                            StatusEffects.GLOWING,
+                            Integer.MAX_VALUE,
+                            0,
+                            false,
+                            false
+                    )
+            );
+        }
+    }
+
+    /**
+     * Убираем Glowing эффект с сущности
+     * 
+     * @param entity сущность
+     */
+    private void removeGlowing(Entity entity) {
+        if (entity instanceof LivingEntity) {
+            LivingEntity living = (LivingEntity) entity;
+            living.removeStatusEffect(StatusEffects.GLOWING);
+        }
+    }
+
+    /**
+     * Убираем свечение со ВСЕХ сущностей (при отключении ESP)
+     */
+    private void removeAllGlowing() {
+        if (client.world == null) {
             return;
         }
 
-        // Рисуем боксы для каждой сущности
-        for (Entity entity : cachedEntities) {
-            drawEntityBox(entity, matrices, config.espBoxColor);
+        for (Entity entity : client.world.getEntities()) {
+            removeGlowing(entity);
         }
-    }
 
-    /**
-     * Рисуем бокс вокруг сущности
-     * 
-     * @param entity сущность для рисования
-     * @param matrices матрица трансформации
-     * @param color цвет в формате 0xARGB
-     */
-    private void drawEntityBox(Entity entity, MatrixStack matrices, int color) {
-        // Получаем размеры hitbox сущности
-        double x = entity.getX() - entity.getWidth() / 2;
-        double y = entity.getY();
-        double z = entity.getZ() - entity.getWidth() / 2;
-        double width = entity.getWidth();
-        double height = entity.getHeight();
-
-        // Тут должен быть код рисования боксов через WorldRenderEvent
-        // Это требует миксина, поэтому оставляем заготовку
-        // Рисование реализуется через RenderUtils
-    }
-
-    /**
-     * Получить кэш сущностей
-     */
-    public List<Entity> getCachedEntities() {
-        return cachedEntities;
+        glowingEntities.clear();
     }
 
     /**
@@ -140,6 +178,10 @@ public class ESPFeature {
         ConfigManager.ModConfig config = ConfigManager.getConfig();
         config.espEnabled = enabled;
         ConfigManager.save();
+
+        if (!enabled) {
+            removeAllGlowing();
+        }
     }
 
     /**
@@ -147,5 +189,12 @@ public class ESPFeature {
      */
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Получить количество выделяемых сущностей
+     */
+    public int getGlowingCount() {
+        return glowingEntities.size();
     }
 }
