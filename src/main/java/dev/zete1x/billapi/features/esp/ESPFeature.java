@@ -10,9 +10,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import dev.zete1x.billapi.config.ConfigManager;
 import dev.zete1x.billapi.config.KeyBindings;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -33,7 +31,7 @@ public class ESPFeature {
 
     private MinecraftClient client = MinecraftClient.getInstance();
     private boolean enabled = false;
-    private Set<Integer> glowingEntities = new HashSet<>(); // Тракируем какие сущности уже светятся
+    private Set<Integer> glowingEntities = new HashSet<>();
 
     /**
      * Вызывается каждый тик
@@ -103,7 +101,6 @@ public class ESPFeature {
         // Убираем свечение с тех сущностей которые больше не нужны
         for (Integer entityId : glowingEntities) {
             if (!currentGlowing.contains(entityId)) {
-                // Ищем сущность по ID и убираем свечение
                 Entity entity = client.world.getEntityById(entityId);
                 if (entity != null) {
                     removeGlowing(entity);
@@ -117,20 +114,15 @@ public class ESPFeature {
     /**
      * Применяем Glowing эффект к сущности
      * Это создает красивое свечение сквозь стены (как spectral arrow)
-     * 
-     * @param entity сущность для выделения
      */
     private void applyGlowing(Entity entity) {
         if (entity instanceof LivingEntity) {
             LivingEntity living = (LivingEntity) entity;
 
-            // Есл�� уже светит - не применяем еще раз
             if (living.hasStatusEffect(StatusEffects.GLOWING)) {
                 return;
             }
 
-            // Применяем эффект Glowing с максимальной длительностью (практически вечный)
-            // Длительность: Integer.MAX_VALUE = примерно 37 часов игрового времени
             living.addStatusEffect(
                     new net.minecraft.entity.effect.StatusEffectInstance(
                             StatusEffects.GLOWING,
@@ -145,8 +137,6 @@ public class ESPFeature {
 
     /**
      * Убираем Glowing эффект с сущности
-     * 
-     * @param entity сущность
      */
     private void removeGlowing(Entity entity) {
         if (entity instanceof LivingEntity) {
