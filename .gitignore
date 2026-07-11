@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+out/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.iws
+*.ipr
+
+# Minecraft
+.minecraft/
+run/
+
+# Java
+*.class
+*.log
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
+# Package Files
+*.jar
+*.rar
+*.zip
+*.tar.gz
+*.rar
+
+# Environment
+.env
+.env.local
