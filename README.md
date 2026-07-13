@@ -3,6 +3,10 @@
 ![Java](https://img.shields.io/badge/Java-21+-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-red?style=flat-square)
 
+# 🌐 Language / Язык
+
+[🇷🇺 Русский](README.md) | [🇺🇸 English](README.en.md)
+
 # 🎯 BillAPI - Мод для Minecraft Fabric
 
 **BillAPI** - это мощный и удобный мод для Minecraft 1.21.1, разработанный на платформе **Fabric**. Мод включает три основные фичи для улучшения игрового опыта: **Autoclicky**, **AimAssist** и **ESP**.
